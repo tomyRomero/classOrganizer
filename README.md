@@ -8,8 +8,26 @@ and it was not in order or visualized in a matter where you are organized and ha
 For This project my front end is html, css and jsp. While the backend is Java along with a servlet API for http request and response. My database is mySQL and my server is glassfish 7.0. I took an
 object-oriented programming approach.
 
-## Running the Program
+# Design
 
+## Home
+![Local Image](Home.png)
+## Create Account
+![Local Image](CreateAccount.png)
+## Login
+![Local Image](Login.png)
+## Landing
+![Local Image](Landing.png)
+## Add Class
+![Local Image](AddClass.png)
+## Remove Class
+![Local Image](RemoveClass.png)
+## Schedule
+![Local Image](Schedule.png)
+## Account Info
+![Local Image](AccountInfo.png)
+
+## Running the Program
 To get this program up and running we need to have glassfish up and working, along with some start-up connection environment variables for our database url and password etc. 
 
 ## Deployment 
