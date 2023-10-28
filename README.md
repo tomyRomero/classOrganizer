@@ -14,7 +14,7 @@ The way that I got my war file onto my EC2 instance was by using SSH protocol.
 
 ## The Tech
 For This project my front end is html, css and jsp. While the backend is Java along with a servlet API for http request and response. My database is mySQL and my server is glassfish 7.0. I took an
-object-oriented programming approach.
+object-oriented programming approach
 
 # Design
 
