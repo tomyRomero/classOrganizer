@@ -1,41 +1,66 @@
 # Hello and Welcome to my First Full stack Project: Class Organizer
-## The Problem I wanted to Solve 
-For my first web app project I want to fix a common issue amongst my classmates in college. Everytime we signed up for classes we would
-receive a class schedule. However, this schedule just had numbers and letters of the day,
-and it was not in order or visualized in a matter where you are organized and have a clear understanding of how your days look like. I set out to write a simple program that lets users create an account and proceed to record their class data like how it is in the default schedule and then my program would visualize a schedule that is clearer to understand.
 
-## Running the Program
-To get this program up and running you need to have glassfish up and working, along with some start-up connection environment variables for our database url and password etc.
+##📋 Table of Contents
 
-## Deployment
-When you build this application you are provided with a war file that can be used to deploy the project.
-The way that I deployed this particular project was with Amazon Web Services. I used an EC2 (virtual server)  instance in the same VPC (Virtual Private Cloud) as my RDS (relational database service) therefore my ec2 was in a public subnet while my RDS remained in a private subnet allowing the data to be secure and safe along with implementing security group rules. I was then able to install and run glassfish on my EC2 and deploy my war file to the glassfish portal while calling to my remote database.
-The way that I got my war file onto my EC2 instance was by using SSH protocol.
+1. 🎯[The Problem](#the-problem-i-wanted-to-solve)
+2. 🚀 [Running the Program](#running-the-program)
+3. 📦[Deployment](#deployment)
+4. 💻 [The Tech](#the-tech)
+5. 🎨[Design](#design)
+6. 📬[Contact](#contact)
 
-## The Tech
-For This project my front end is html, css and jsp. While the backend is Java along with a servlet API for http request and response. My database is mySQL and my server is glassfish 7.0. I took an
-object-oriented programming approach
+## <a name="the-problem-i-wanted-to-solve">🎯 The Problem</a>
 
-# Design
+For my first web app project, I aimed to address a common issue among my college classmates. The class schedule we received was not organized or visualized in a way that provided a clear understanding of how our days looked like. I set out to create a simple program that allows users to create an account, record their class data, and visualize a clearer schedule.
 
-## Home
+## <a name="running-the-program">🚀 Running the Program</a>
+
+To run this program, you need to have GlassFish up and working, along with startup connection environment variables for your database URL and password, etc.
+
+## <a name="deployment">📦 Deployment</a>
+
+After building the application, you are provided with a WAR file that can be used to deploy the project. I deployed this project on Amazon Web Services using an EC2 instance in the same VPC as my RDS. My EC2 was in a public subnet, and my RDS remained in a private subnet for secure data storage. I used SSH protocol to transfer the WAR file to my EC2 instance.
+
+## <a name="the-tech">💻 The Tech</a>
+
+- **Frontend:** HTML, CSS, JSP ![HTML Badge](https://img.shields.io/badge/-HTML-orange?style=flat&logo=html5)
+  ![CSS Badge](https://img.shields.io/badge/-CSS-blue?style=flat&logo=css3)
+  ![JSP Badge](https://img.shields.io/badge/-JSP-green?style=flat)
+
+- **Backend:** Java, Servlet API ![Java Badge](https://img.shields.io/badge/-Java-red?style=flat&logo=java)
+
+- **Database:** MySQL ![MySQL Badge](https://img.shields.io/badge/-MySQL-blue?style=flat&logo=mysql)
+
+- **Server:** GlassFish 7.0 ![GlassFish Badge](https://img.shields.io/badge/-GlassFish-yellow?style=flat)
+
+- Object-oriented programming approach
+
+# <a name="design">🎨 Design</a>
+
+## <a name="home">Home</a>
 ![Local Image](Home.png)
-## Create Account
+
+## <a name="create-account">Create Account</a>
 ![Local Image](CreateAccount.png)
-## Login
+
+## <a name="login">Login</a>
 ![Local Image](Login.png)
-## Landing
+
+## <a name="landing">Landing</a>
 ![Local Image](Landing.png)
-## Add Class
+
+## <a name="add-class">Add Class</a>
 ![Local Image](AddClass.png)
-## Remove Class
+
+## <a name="remove-class">Remove Class</a>
 ![Local Image](RemoveClass.png)
-## Schedule
+
+## <a name="schedule">Schedule</a>
 ![Local Image](Schedule.png)
-## Account Info
+
+## <a name="account-info">Account Info</a>
 ![Local Image](AccountInfo.png)
 
-
-## Contact
-Any questions, comments, concerns, email me at 
-tomyfletcher99@hotmail.com, hope you guys enjoy. 
+## <a name="contact">📬 Contact</a>
+[![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/tomy-romero-902476145/)
+Any questions, comments, or concerns, email me at tomyfletcher99@hotmail.com. Hope you guys enjoy.
