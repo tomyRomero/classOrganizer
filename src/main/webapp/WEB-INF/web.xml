@@ -5,6 +5,10 @@
          version="6.0">
     <display-name>Class Organizer</display-name>
 
+    <!-- Forms and pages are UTF-8 on every server, so a name like "José" is stored and shown as typed. -->
+    <request-character-encoding>UTF-8</request-character-encoding>
+    <response-character-encoding>UTF-8</response-character-encoding>
+
     <!-- Servlets, the filter and the listener register themselves with annotations (@WebServlet and friends). -->
 
     <session-config>
