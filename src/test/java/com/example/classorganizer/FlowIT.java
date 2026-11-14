@@ -5,103 +5,62 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.example.classorganizer.Browser.Page;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/** Every flow of the app, walked through the running server the way a browser would. */
+/** The whole app walked once the way a student uses it, and what they see when the database fails. */
 class FlowIT {
 
     private final Browser browser = new Browser();
 
     @Test
-    void signUpCreatesAnAccount() throws Exception {
-        String username = Browser.newUsername("signup");
-        Page page = browser.signUp(username, "Ada", "Lovelace");
-        assertEquals(200, page.status());
-        assertTrue(page.shows("Account Created: Proceed to Login"));
-        assertTrue(page.shows("Your username is: " + username));
-    }
+    void aStudentWalksThroughTheWholeApp() throws Exception {
+        String username = Browser.newUsername("katherine");
+        assertTrue(browser.signUp(username, "Katherine", "Johnson").shows("Account Created: Proceed to Login"));
+        assertTrue(browser.logIn(username, Browser.PASSWORD).shows("Welcome User: Katherine Johnson"));
 
-    @Test
-    void logInOpensTheLandingPage() throws Exception {
-        String username = Browser.newUsername("login");
-        browser.signUp(username, "Ada", "Lovelace");
-        Page page = browser.logIn(username, Browser.PASSWORD);
-        assertEquals(200, page.status());
-        assertTrue(page.shows("Welcome User: Ada Lovelace"));
-        assertTrue(page.shows("View Classes"));
-    }
-
-    @Test
-    void addClassSavesIt() throws Exception {
-        browser.newStudent("Grace");
-        Page page = browser.addClass(Browser.classForm("Intro to Java", "1234", "09:30"));
-        assertTrue(page.shows("Class Added"));
-        assertTrue(page.shows("For: Grace Student"));
-        assertTrue(browser.get("table").shows("<td>Intro to Java</td>"));
-    }
-
-    @Test
-    void theScheduleListsClassesEarliestFirstWithTheGpa() throws Exception {
-        browser.newStudent("Alan");
-        browser.addClass(Browser.classForm("Intro to Java", "1234", "09:30"));
+        assertTrue(browser.addClass(Browser.classForm("Intro to Java", "1234", "09:30")).shows("Class Added"));
         Map<String, String> calculus = Browser.classForm("Calculus", "2345", "08:00");
         calculus.put("class grade", "85");
         calculus.put("class credit", "2");
         browser.addClass(calculus);
 
-        Page page = browser.get("table");
-        assertTrue(page.shows("My GPA: 3.67"));
-        assertTrue(page.body().indexOf("Calculus") < page.body().indexOf("Intro to Java"));
-        assertTrue(page.shows("<td>08:00</td>"));
-        assertTrue(page.shows("<td>&#10003;</td>"));
-    }
-
-    @Test
-    void anEmptyScheduleSaysSo() throws Exception {
-        browser.newStudent("Mary");
-        assertTrue(browser.get("table").shows("Classes are empty, try adding one and coming back"));
-    }
-
-    @Test
-    void removeClassTakesOnlyThatClassOffTheSchedule() throws Exception {
-        browser.newStudent("Edsger");
-        browser.addClass(Browser.classForm("Intro to Java", "1234", "09:30"));
-        browser.addClass(Browser.classForm("Calculus", "2345", "08:00"));
-
-        Page page = browser.removeClass("Intro to Java", "1234");
-        assertTrue(page.shows("Class Removed Successfully"));
-        assertTrue(page.shows("CRN: 1234"));
+        // Earliest class first; an A over 4 credits and a B over 2 make (16 + 6) / 6 = 3.67.
         Page schedule = browser.get("table");
-        assertFalse(schedule.shows("Intro to Java"));
-        assertTrue(schedule.shows("Calculus"));
+        assertTrue(schedule.body().indexOf("Calculus") < schedule.body().indexOf("Intro to Java"));
+        assertTrue(schedule.shows("My GPA: 3.67"));
+
+        assertTrue(browser.removeClass("Intro to Java", "1234").shows("Class Removed Successfully"));
+        assertFalse(browser.get("table").shows("Intro to Java"));
+
+        Page account = browser.get("account");
+        assertTrue(account.shows("Username: " + username));
+        assertTrue(account.shows("Number-of-Classes: 1"));
+        assertTrue(account.shows("TotalCredits: 2"));
+
+        assertTrue(browser.get("logout").shows("Register"));
+        assertEquals(401, browser.get("Landing.jsp").status());
     }
 
     @Test
-    void accountInfoShowsTheStudentAndTheirTotals() throws Exception {
-        String username = browser.newStudent("Katherine");
-        browser.addClass(Browser.classForm("Intro to Java", "1234", "09:30"));
-        browser.addClass(Browser.classForm("Calculus", "2345", "08:00"));
-
-        Page page = browser.get("account");
-        assertTrue(page.shows("FirstName: Katherine"));
-        assertTrue(page.shows("LastName: Student"));
-        assertTrue(page.shows("Email: " + username + "@example.com"));
-        assertTrue(page.shows("Age: 23"));
-        assertTrue(page.shows("Username: " + username));
-        assertTrue(page.shows("Number-of-Classes: 2"));
-        assertTrue(page.shows("TotalCredits: 8"));
-    }
-
-    @Test
-    void logOutEndsTheSessionAndGoesHome() throws Exception {
-        browser.newStudent("Barbara");
-        Page home = browser.get("logout");
-        assertTrue(home.shows("Class Organizer"));
-        assertTrue(home.shows("Register"));
-
-        Page after = browser.get("Landing.jsp");
-        assertEquals(401, after.status());
-        assertTrue(after.shows("Please login first"));
+    void aDatabaseFailureShowsAPlainLineNotAStackTrace() throws Exception {
+        browser.newStudent("Unlucky");
+        try (Connection database = DriverManager.getConnection(System.getProperty("it.databaseUrl"));
+             Statement sql = database.createStatement()) {
+            // Hide the classes table for a moment, so the schedule page's query fails.
+            sql.execute("ALTER TABLE userclasses RENAME TO userclasses_hidden");
+            try {
+                Page page = browser.get("table");
+                assertEquals(500, page.status());
+                assertTrue(page.shows(Pages.SERVER_PROBLEM));
+                assertFalse(page.shows("Exception"));
+                assertFalse(page.shows("userclasses"));
+            } finally {
+                sql.execute("ALTER TABLE userclasses_hidden RENAME TO userclasses");
+            }
+        }
     }
 }

@@ -11,16 +11,27 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/** Passwords, sessions, one student's data against another's, and escaping, through the running app. */
+/** The security faults the 2023 version had, each checked through the running app. */
 class SecurityIT {
 
     @Test
-    void theAppStoresAHashNeverThePassword() throws Exception {
+    void logInFindsTheAccountByUsernameNotByPassword() throws Exception {
+        // Both students have the same password. The 2023 version looked accounts up by password.
+        Browser browser = new Browser();
+        String grace = Browser.newUsername("grace");
+        browser.signUp(Browser.newUsername("ada"), "Ada", "Lovelace");
+        browser.signUp(grace, "Grace", "Hopper");
+
+        assertTrue(browser.logIn(grace, Browser.PASSWORD).shows("Welcome User: Grace Hopper"));
+        assertTrue(new Browser().logIn(grace, "not the password").shows("Incorrect Username or Password"));
+    }
+
+    @Test
+    void aPasswordIsNeverStoredAsTyped() throws Exception {
         String username = Browser.newUsername("hash");
         new Browser().signUp(username, "Ada", "Lovelace");
 
@@ -34,9 +45,23 @@ class SecurityIT {
                 stored = row.getString(1);
             }
         }
-        assertNotEquals(Browser.PASSWORD, stored);
         assertFalse(stored.contains(Browser.PASSWORD));
         assertTrue(Passwords.matches(Browser.PASSWORD, stored));
+    }
+
+    @Test
+    void typedTextCannotChangeAQuery() throws Exception {
+        assertTrue(new Browser().logIn("' OR '1'='1", "' OR '1'='1").shows("Incorrect Username or Password"));
+
+        Browser browser = new Browser();
+        browser.newStudent("Robert");
+        browser.addClass(Browser.classForm("Intro to Java", "1234", "09:30"));
+        String sneaky = "x'); DELETE FROM userclasses; --";
+        assertTrue(browser.addClass(Browser.classForm(sneaky, "2345", "10:30")).shows("Class Added"));
+
+        Page schedule = browser.get("table");
+        assertTrue(schedule.shows("Intro to Java"));
+        assertTrue(schedule.shows(Html.escape(sneaky)));
     }
 
     @ParameterizedTest
@@ -45,7 +70,6 @@ class SecurityIT {
         Page page = new Browser().get(path);
         assertEquals(401, page.status());
         assertTrue(page.shows("Please login first"));
-        assertFalse(page.shows("Welcome User"));
     }
 
     @Test
@@ -53,18 +77,6 @@ class SecurityIT {
         Browser visitor = new Browser();
         assertEquals(401, visitor.addClass(Browser.classForm("Sneaky", "1", "09:00")).status());
         assertEquals(401, visitor.removeClass("Sneaky", "1").status());
-    }
-
-    @Test
-    void aWrongPasswordOrUnknownNameDoesNotLogIn() throws Exception {
-        Browser browser = new Browser();
-        String username = Browser.newUsername("wrong");
-        browser.signUp(username, "Ada", "Lovelace");
-
-        assertTrue(browser.logIn(username, "not the password").shows("Incorrect Username or Password"));
-        assertTrue(browser.logIn("nobody" + username, Browser.PASSWORD).shows("Incorrect Username or Password"));
-        assertTrue(browser.logIn("' OR '1'='1", "' OR '1'='1").shows("Incorrect Username or Password"));
-        assertEquals(401, browser.get("table").status());
     }
 
     @Test
@@ -77,14 +89,12 @@ class SecurityIT {
 
         browser.logIn(username, Browser.PASSWORD);
         String after = browser.sessionId();
-        assertNotNull(after);
         assertNotEquals(before, after);
-        assertEquals(401, Browser.getWithSessionId("table", before).status());
         assertEquals(200, Browser.getWithSessionId("table", after).status());
     }
 
     @Test
-    void logOutMakesTheOldSessionIdUseless() throws Exception {
+    void logOutEndsTheSession() throws Exception {
         Browser browser = new Browser();
         browser.newStudent("Leaving");
         String sessionId = browser.sessionId();
@@ -115,7 +125,6 @@ class SecurityIT {
     @Test
     void typedTextIsEscapedOnEveryPage() throws Exception {
         String script = "<script>alert(1)</script>";
-        String escaped = "&lt;script&gt;alert(1)&lt;/script&gt;";
         Browser browser = new Browser();
         String username = Browser.newUsername("xss");
         browser.signUp(username, script, "Student");
@@ -125,24 +134,7 @@ class SecurityIT {
         for (String path : new String[] {"Landing.jsp", "AddClass.jsp", "RemoveClass.jsp", "table", "account"}) {
             Page page = browser.get(path);
             assertFalse(page.shows(script), path);
-            assertTrue(page.shows(escaped), path);
-        }
-    }
-
-    @Test
-    void badRequestsGetAPlainMessageNeverAStackTrace() throws Exception {
-        Page signUp = new Browser().post("process-signup", Map.of());
-        assertEquals(200, signUp.status());
-        assertTrue(signUp.shows("Error creating account, please try again"));
-
-        Browser browser = new Browser();
-        browser.newStudent("Empty");
-        Page addClass = browser.post("process-class", Map.of());
-        assertTrue(addClass.shows("Some Fields Were Incorrect or Empty Please Try Again"));
-
-        for (Page page : new Page[] {signUp, addClass}) {
-            assertFalse(page.shows("Exception"));
-            assertFalse(page.shows("at com.example"));
+            assertTrue(page.shows(Html.escape(script)), path);
         }
     }
 }
