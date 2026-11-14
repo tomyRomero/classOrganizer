@@ -1,89 +1,52 @@
 package com.example.classorganizer;
 
+import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.sql.*;
+import java.sql.SQLException;
+import java.util.List;
 
+/** The Remove Class form. Removes a class only from the logged-in student's own schedule. */
 @WebServlet(name = "ProcessRemoveClass", value = "/process-remove-class")
 public class ProcessRemoveClass extends HttpServlet {
-    private String message;
 
+    private static final String FAILED = "Failed to Remove Class, try again";
+
+    private Database database;
+
+    @Override
     public void init() {
-        message = "Data Removed";
+        database = Pages.database(getServletContext());
     }
 
-    Database myDatabase = new Database();
-
-
-    public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        Boolean access = false;
-
-        String className = request.getParameter("class-name");
-        String crn = request.getParameter("class crn");
-
-        HttpSession mySess = request.getSession();
-
-        int myID = (Integer) mySess.getAttribute("sID");
-
-        String stringId = Integer.toString(myID);
-
-        String sqlClassname = myDatabase.getWhereEqualsSQL("userclasses","className","idUserClasses", stringId);
-
-        String sqlCRN = myDatabase.getWhereEqualsSQL("userclasses", "crn", "idUserClasses", stringId);
-
-        if (sqlClassname.equals(className) && sqlCRN.equals(crn))
-        {
-            access = myDatabase.DeleteRow("crn","userclasses", crn);
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        String className = Pages.field(request, "class-name");
+        String crn = Pages.field(request, "class crn");
+        List<String> problems = Validation.checkRemoveClass(className, crn);
+        if (!problems.isEmpty()) {
+            Pages.show(request, response, "/RemoveClass.jsp", FAILED, problems);
+            return;
         }
 
-
-        if (access)
-        {
-            PrintWriter out = response.getWriter();
-
-            String htmlResponse = "<html>";
-            htmlResponse += "<div style= 'text-align: center'> ";
-            htmlResponse += "<h1> Class Removed Successfully <h1/>";
-            htmlResponse += "<h2> Class: " + className + "<h2/>";
-            htmlResponse += "<h2> CRN: " + crn + "<h2/>";
-            htmlResponse += "<h2> Your ID: " + stringId + "<h2/>";
-            htmlResponse += "</div>";
-            htmlResponse += "</html>";
-            out.println(htmlResponse);
-
-            try {
-                request.getRequestDispatcher("/RemoveClass.jsp").include(request, response);
-            }
-            catch(Exception e)
-            {
-                System.out.println(e);
-            }
+        int userId = CurrentUser.id(request);
+        boolean removed;
+        try {
+            removed = database.removeClass(userId, className, Integer.parseInt(crn));
+        } catch (SQLException e) {
+            Pages.serverProblem(request, response, "/RemoveClass.jsp", FAILED, e);
+            return;
         }
-        else
-        {
-            PrintWriter out = response.getWriter();
-
-            String htmlResponse = "<html>";
-            htmlResponse += "<div style = 'text-align: center'> ";
-            htmlResponse += "<h1> Failed to Remove Class, try again <h1/>";
-            htmlResponse += "</div>";
-            htmlResponse += "</html>";
-            out.println(htmlResponse);
-
-            try {
-                request.getRequestDispatcher("/RemoveClass.jsp").include(request, response);
-            }
-            catch(Exception e)
-            {
-                System.out.println(e);
-            }
+        if (removed) {
+            Pages.show(request, response, "/RemoveClass.jsp", "Class Removed Successfully",
+                    List.of("Class: " + className, "CRN: " + crn, "Your ID: " + userId));
+        } else {
+            Pages.show(request, response, "/RemoveClass.jsp", FAILED,
+                    List.of("You have no class named " + className + " with CRN " + crn + "."));
         }
     }
-
-
 }

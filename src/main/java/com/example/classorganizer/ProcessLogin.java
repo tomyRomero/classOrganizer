@@ -1,113 +1,49 @@
 package com.example.classorganizer;
 
-import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.sql.SQLException;
+import java.util.List;
+import java.util.Optional;
 
+/** The Login form. Finds the account by username, then checks the password against its hash. */
 @WebServlet(name = "ProcessLogin", value = "/process-login")
-public class ProcessLogin extends HttpServlet
-{
-    private String message;
+public class ProcessLogin extends HttpServlet {
 
-    public void init()
-    {
-        message = "Data Processed";
+    private Database database;
+
+    @Override
+    public void init() {
+        database = Pages.database(getServletContext());
     }
 
-    Database myDatabase = new Database();
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        String username = Pages.field(request, "username");
+        String password = request.getParameter("password") == null ? "" : request.getParameter("password");
 
-    public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        response.setContentType("text/html");
-
-        String username = request.getParameter("username");
-        String password = request.getParameter("password");
-
-        String sqlPassword = myDatabase.getWhereEqualsSQL("usertable","password","username",username);
-        String sqlUsername = myDatabase.getWhereEqualsSQL("usertable","username","password", password);
-
-
-        Boolean access = false;
-
-        if (username.equals(sqlUsername) && password.equals(sqlPassword))
-        {
-            access = true;
+        Optional<Customer> account;
+        try {
+            account = database.findByUsername(username);
+        } catch (SQLException e) {
+            Pages.serverProblem(request, response, "/Login.jsp", "Could not log you in", e);
+            return;
         }
-
-
-        PrintWriter out = response.getWriter();
-
-        // build HTML code
-        String htmlResponse = "<html>";
-        htmlResponse += "<html>\n" +
-                "<head>\n" +
-                " <title>View Account</title>\n" +
-                " <link href=\"main.css\" rel=\"stylesheet\" type=\"text/css\">" +
-                "</head>\n" +
-                "<body>\n";
-        if (access)
-        {
-            HttpSession session1 = request.getSession();
-
-            if (session1 != null) {
-                try {
-                    String fullName = myDatabase.getWhereEqualsSQL("usertable", "firstname", "password", password) + " " + myDatabase.getWhereEqualsSQL("usertable", "lastname", "username", username);
-
-                    int sqlID = Integer.parseInt(myDatabase.getWhereEqualsSQL("usertable","id", "password", password));
-                    session1.setAttribute("name", fullName);
-                    session1.setAttribute("sUser", sqlUsername);
-                    session1.setAttribute("sPass", sqlPassword);
-                    session1.setAttribute("sID",sqlID);
-
-
-                    RequestDispatcher requestDispatcher = request.getRequestDispatcher("/Landing.jsp");
-
-                    requestDispatcher.forward(request, response);
-                }
-                catch (Exception e) {
-                    htmlResponse += " <h3> error <h3>";
-                }
-            }
-            else
-            {
-                htmlResponse += "<h1> Please login first <h1/>";
-                try {
-                    request.getRequestDispatcher("/Login.jsp").include(request, response);
-                }
-                catch (Exception e)
-                {
-                    System.out.println(e);
-                }
-            }
+        boolean passwordMatches = account.isPresent()
+                ? Passwords.matches(password, account.get().passwordHash())
+                : Passwords.matchesNobody(password);
+        if (!passwordMatches) {
+            // The same words for a wrong username and a wrong password, so neither is given away.
+            Pages.show(request, response, "/Login.jsp", "Incorrect Username or Password", List.of());
+            return;
         }
-        else
-        {
-            htmlResponse += "<h2> Incorrect Username or Password <h2/>";
-            try {
-                request.getRequestDispatcher("/Login.jsp").include(request, response);
-            }
-            catch (Exception e)
-            {
-                System.out.println(e);
-            }
-        }
-        htmlResponse += "</body>";
-        htmlResponse += "</html>";
-        out.println(htmlResponse);
+        CurrentUser.logIn(request, account.get());
+        // A redirect, so refreshing the next page does not send the password again.
+        response.sendRedirect("Landing.jsp");
     }
-
-    public void destroy()
-    {
-
-    }
-
-
 }

@@ -6,6 +6,7 @@
     <link href="main.css" rel="stylesheet" type="text/css">
 </head>
 <body>
+<%@ include file="/WEB-INF/message.jspf" %>
 
 <img src="books.png" alt="bookslogo">
 

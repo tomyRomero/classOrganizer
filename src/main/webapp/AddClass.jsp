@@ -1,14 +1,16 @@
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="com.example.classorganizer.Html" %>
 <html>
 <head>
     <title>Add Class</title>
     <link href="main.css" rel="stylesheet" type="text/css">
 </head>
 <body>
+<%@ include file="/WEB-INF/message.jspf" %>
 <img src="books.png" alt="bookslogo">
 <h1>Add Class</h1>
-<h1>User: ${name}</h1>
+<h1>User: ${Html.escape(name)}</h1>
 <div class="form-style">
     <form name="add-class-form" method="post" action="process-class">
         <label><span>Classname<span class="required">*</span></span><input type="text" class="input-field" name="class-name" value="" required/></label>
