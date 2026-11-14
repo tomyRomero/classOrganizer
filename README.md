@@ -90,7 +90,7 @@ Today `./mvnw package` still builds that WAR in `target/`. It runs on any Jakart
 
 ## <a name="what-changed-in-2026-and-why">What changed in 2026, and why</a>
 
-The app looks and works the same as in 2023. These are the five changes I learned the most from.
+The app works the same as in 2023, and its pages got a plain new look (see [Design](#design)). These are the five changes I learned the most from.
 
 - **Passwords.** In 2023 I saved passwords exactly as people typed them. Now they are saved as salted PBKDF2 hashes (`Passwords.java`), which the JDK can make with no extra library. If the table ever leaks, the passwords do not.
 - **Logging in.** My old login looked the account up by its password, so two students with the same password could land in each other's accounts. Now it finds the account by username and then checks the password. Logging in also starts a new session, and logging out ends it.
@@ -99,6 +99,8 @@ The app looks and works the same as in 2023. These are the five changes I learne
 - **Checking and escaping input.** My forms trusted whatever came in, a blank number crashed the page, and names went onto the page as raw HTML. Now `Validation.java` checks every field on the server and shows a plain message, and everything a person typed is escaped before it is shown.
 
 # <a name="design">🎨 Design</a>
+
+In 2026 I refreshed the look on the same pages, with plain CSS in `main.css`. The pictures show it with made-up sample data.
 
 ## <a name="home">Home</a>
 ![Local Image](Home.png)
