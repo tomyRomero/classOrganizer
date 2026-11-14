@@ -1,0 +1,35 @@
+name: Build and test
+
+on:
+  push:
+  pull_request:
+
+# The job only reads the code; it cannot push, comment or change settings.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Reuse Maven downloads between runs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.m2/wrapper
+          key: maven-${{ runner.os }}-${{ hashFiles('pom.xml', '.mvn/wrapper/maven-wrapper.properties') }}
+          restore-keys: maven-${{ runner.os }}-
+
+      # The runner image ships Java 17, so no setup action is needed.
+      - name: Build and run every test on Java 17
+        run: |
+          test -n "$JAVA_HOME_17_X64" || { echo "This runner has no Java 17"; exit 1; }
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          ./mvnw -B verify
