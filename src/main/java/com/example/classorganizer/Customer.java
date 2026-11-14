@@ -1,87 +1,19 @@
 package com.example.classorganizer;
 
-class Customer {
-    private int id;
-    private String firstname;
-    private String lastname;
-    private String username;
-    private String email;
-    private int age;
-    private String password;
+/**
+ * A student's account, as stored in usertable. A record is Java's short form for an immutable
+ * data class, like a C# record: the constructor, getters, equals and hashCode come for free.
+ */
+record Customer(int id, String firstName, String lastName, String email, int age, String username,
+                String passwordHash) {
 
-    public Customer(int id, String fn, String ln, String email, int age, String username, String password)
-    {
-        this.id = id;
-        this.firstname = fn;
-        this.lastname = ln;
-        this.email = email;
-        this.age = age;
-        this.password =password;
-        this.username =username;
+    String fullName() {
+        return firstName + " " + lastName;
     }
 
-    public int getId()
-    {
-        return id;
-    }
-
-    public String getFirstName()
-    {
-        return this.firstname;
-    }
-
-    public String getLastName()
-    {
-        return lastname;
-    }
-
-    public String getEmail()
-    {
-        return email;
-    }
-
-    public int getAge()
-    {
-        return age;
-    }
-
-    public String getPassword()
-    {
-        return password;
-    }
-
-    public void setId(int id)
-    {
-        this.id =id;
-    }
-
-    public void setFirstName(String fname)
-    {
-        this.firstname =fname;
-    }
-
-    public void setLastName(String lname)
-    {
-        this.lastname =lname;
-    }
-
-    public void setEmail(String eml)
-    {
-        this.email=eml;
-    }
-
-    public void setPassWord(String pass)
-    {
-        this.password=pass;
-    }
-
-    public void setAge(int age)
-    {
-        this.age = age;
-    }
-
-    public String getUsername()
-    {
-        return this.username;
+    /** Leaves the hash out, so printing or logging an account never writes it anywhere. */
+    @Override
+    public String toString() {
+        return "Customer[id=" + id + ", username=" + username + "]";
     }
 }

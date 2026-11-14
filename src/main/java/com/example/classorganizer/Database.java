@@ -1,381 +1,192 @@
 package com.example.classorganizer;
 
-import jakarta.servlet.http.HttpServletResponse;
-
-import java.sql.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
+import java.time.DayOfWeek;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-class Database {
+/**
+ * Every SQL statement the app runs, in one place.
+ *
+ * Each method opens a connection and closes it, with its statement and results, through
+ * try-with-resources (Java's version of C#'s "using"). Values always go in as "?" parameters,
+ * never glued into the SQL text, so nothing a user types can change a query. Failures are thrown
+ * as SQLException, never hidden; the servlets log them and show the student a plain line.
+ */
+public final class Database {
 
-    private final String sqlUrl;
-    private final String  classForName;
+    private static final String CUSTOMER_COLUMNS = "id, firstname, lastname, email, age, username, password_hash";
+    private static final String CLASS_COLUMNS = "idUserClasses, ClassName, Subject, Time, Monday, Tuesday,"
+            + " Wednesday, Thursday, Friday, Saturday, Professor, CRN, Grade, Credits";
+
+    private final String url;
     private final String user;
     private final String password;
 
-    public Database()
-    {
-        this.classForName = "com.mysql.cj.jdbc.Driver";
-        this.sqlUrl = System.getenv("SQL_Connection");
-        this.user = System.getenv("user");
-        this.password = System.getenv("password");
-
+    Database(String url, String user, String password) {
+        this.url = url;
+        this.user = user;
+        this.password = password;
     }
 
+    /** The same three settings the app has always read: SQL_Connection, user and password. */
+    static Database fromSettings() {
+        String url = Settings.read("SQL_Connection");
+        if (url == null || url.isBlank()) {
+            throw new IllegalStateException("SQL_Connection is not set. Point it at your MySQL database,"
+                    + " or start the app with ./mvnw jetty:run to use the embedded one.");
+        }
+        return new Database(url, Settings.read("user"), Settings.read("password"));
+    }
 
-     public  int getLastID(String table, String column) {
-         try {
-             Class.forName(classForName);
-             Connection connection = DriverManager.getConnection(sqlUrl,user,password);
-             System.out.println("Connection" + connection);
-             Statement statement = connection.createStatement();
-             ResultSet resultset = statement.executeQuery("select " + column + " from " + table + " ORDER BY id DESC LIMIT 1;");
-             String season = null;
-             if(resultset.next())
-             {
-                 season = resultset.getString(1);
-             }
-             int data = Integer.parseInt(season);
-             return data;
+    /** True for the in-memory H2 database of local runs and tests, which starts empty every time. */
+    boolean isEmbedded() {
+        return url.startsWith("jdbc:h2:");
+    }
 
-         } catch (Exception e) {
-             e.printStackTrace();
-             return 0;
-         }
-     }
+    private Connection connect() throws SQLException {
+        return DriverManager.getConnection(url, user, password);
+    }
 
-    public  Boolean insertData(Customer c, HttpServletResponse response)
-    {
-        Boolean test= false;
-        try {
-
-            System.out.println("Connecting ...");
-            Class.forName(classForName);
-            Connection connection = DriverManager.getConnection(sqlUrl,user,password);
-            System.out.println("Trying ..Connecting to a selected database..." + connection);
-            Statement st = connection.createStatement();
-
-            String SQL_INSERT = "INSERT INTO usertable(id,firstname,lastname,email,age,username, password) VALUES (?,?,?,?,?,?,?)";
-            PreparedStatement prepStat= connection.prepareStatement(SQL_INSERT);
-
-            System.out.println("Trying 2..Connecting to a selected database..." + prepStat);
-
-            prepStat.setInt(1,c.getId());
-            prepStat.setString(2,c.getFirstName());
-            prepStat.setString(3,c.getLastName());
-            prepStat.setString(4,c.getEmail());
-            prepStat.setInt(5,c.getAge());
-            prepStat.setString(6,c.getUsername());
-            prepStat.setString(7,c.getPassword());
-
-            System.out.println("Trying 2..Connecting to a selected database...");
-            int row = prepStat.executeUpdate();
-            if (row> 0) {
-                System.out.println("A new user was inserted successfully!");
-                test = true;
+    /** Runs schema.sql. The embedded database needs it on every start; MySQL gets it from compose.yaml. */
+    void createTables() throws SQLException, IOException {
+        String script;
+        try (InputStream in = Database.class.getResourceAsStream("/schema.sql")) {
+            if (in == null) {
+                throw new IOException("schema.sql is missing from the classpath");
             }
-
-            System.out.println("Store into the database");
-
+            script = new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
-        catch (Exception ex)
-        {
-            System.out.println("Error in connection:" + ex.getCause());
-        }
-        return test;
-    }
-
-    public  String getWhereEqualsSQL(String table, String get, String where, String equal)
-    {
-
-        try {
-            Class.forName(classForName);
-            Connection connection = DriverManager.getConnection(sqlUrl,user,password);
-            System.out.println("Connection" + connection);
-            Statement statement = connection.createStatement();
-
-            ResultSet resultset = statement.executeQuery("select "+ get + " from " + table + " where "+ where + "='" + equal +"';");
-
-
-            String season = null;
-            if(resultset.next())
-            {
-                season = resultset.getString(1);
-            }
-
-            return season;
-
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Invalid";
-        }
-    }
-
-    public int getNumberClasses(int Id, String table)
-    {
-        List<ArrayList> myClasses = new ArrayList<ArrayList>();
-        try{
-
-            Class.forName(classForName);
-            Connection conn = DriverManager.getConnection(sqlUrl,user,password);
-
-            Statement stat = null;
-            ResultSet result = null;
-
-            stat = conn.createStatement();
-            result = stat.executeQuery("SELECT * FROM " + table);
-            int count = 0;
-            while (result.next())
-            {
-                if (result.getInt("idUserClasses")== Id)
-                {
-                    count += 1;
+        String withoutComments = script.lines()
+                .filter(line -> !line.strip().startsWith("--"))
+                .collect(Collectors.joining("\n"));
+        try (Connection connection = connect()) {
+            for (String sql : withoutComments.split(";")) {
+                if (!sql.isBlank()) {
+                    try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                        statement.execute();
+                    }
                 }
             }
-            return count;
-        }
-        catch (Exception e)
-        {
-            System.err.println("SQLException in Query.java");
-            return 0;
         }
     }
 
-    public int getNumberCredits(int Id, String table)
-    {
-        List<ArrayList> myClasses = new ArrayList<ArrayList>();
-        try{
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            Connection conn = DriverManager.getConnection(sqlUrl,user,password);
-            Statement stat = null;
-            ResultSet result = null;
-            int totalCredits =0;
-            stat = conn.createStatement();
-            result = stat.executeQuery("SELECT * FROM " + table);
-            while (result.next())
-            {
-                if (result.getInt("idUserClasses")== Id)
-                {
-                    totalCredits += result.getInt("Credits");
-                }
-            }
-            return totalCredits;
-        }
-        catch (Exception e)
-        {
-            System.err.println("SQLException in Query.java");
-            return 0;
-        }
-    }
-
-
-    public static int getBooleanDay(Boolean myInput)
-    {
-        if (myInput == true)
-        {
-            return 1;
-        }else if(myInput == false)
-        {
-            return 0;
-        }else
-        {
-            System.out.println("Error in translating Boolean input");
-            return -1;
-        }
-    }
-
-    public  Boolean insertClassData(myClass c)
-    {
-        Boolean access =false;
-        try {
-            Class.forName(classForName);
-            Connection conn = DriverManager.getConnection(sqlUrl, user, password);
-
-            Statement stmt = conn.createStatement();
-
-            int idUserClassesV = c.getUserId();
-            String ClassNameV = c.getClassName();
-            String subjectV = c.getClassSubject();
-            String timeV = c.getTime();
-            int mondayV = getBooleanDay(c.getMonday());
-            int tuesdayV = getBooleanDay(c.getTuesday());
-            int wednesdayV = getBooleanDay(c.getWednesday());
-            int thursdayV = getBooleanDay(c.getThursday());
-            int fridayV = getBooleanDay(c.getFriday());
-            int saturdayV = getBooleanDay(c.getSaturday());
-            String professorV = c.getProfessor();
-            int crnV = c.getCrn();
-            int gradeV = c.getGrade();
-            int creditV = c.getCredits();
-
-            String SQL_INSERT = "INSERT INTO userclasses(idUserClasses,ClassName,Subject,Time,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Professor,CRN,Grade,Credits) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-
-            PreparedStatement prepStat= conn.prepareStatement(SQL_INSERT);
-
-            System.out.println("Trying 2..Connecting to a selected database..." + prepStat);
-
-            prepStat.setInt(1,idUserClassesV);
-            prepStat.setString(2,ClassNameV);
-            prepStat.setString(3,subjectV);
-            prepStat.setString(4,timeV);
-            prepStat.setInt(5,mondayV);
-            prepStat.setInt(6,tuesdayV);
-            prepStat.setInt(7,wednesdayV);
-            prepStat.setInt(8,thursdayV);
-            prepStat.setInt(9,fridayV);
-            prepStat.setInt(10,saturdayV);
-            prepStat.setString(11,professorV);
-            prepStat.setInt(12,crnV);
-            prepStat.setInt(13,gradeV);
-            prepStat.setInt(14,creditV);
-
-            int row = prepStat.executeUpdate();
-
-            if (row> 0) {
-                System.out.println("A new class was inserted successfully!");
-                access = true;
-            }
-
-            conn.close();
-
-        }catch(Exception e)
-        {
-            System.out.println(e);
-        }
-
-        return access;
-    }
-
-    public Boolean DeleteRow(String deleteN,String tableN, String isEqual) {
-        Boolean didIt = false;
-        try{
-            Class.forName(classForName);
-            Connection conn = DriverManager.getConnection(sqlUrl, user, password);
-
-            String sql = "DELETE FROM " + tableN  + " WHERE " + deleteN + " =?";
-
-
-            PreparedStatement statement = conn.prepareStatement(sql);
-            statement.setString(1, isEqual);
-
-            int rowsDeleted = statement.executeUpdate();
-
-            if (rowsDeleted > 0) {
-                System.out.println(" delete successfully!");
-                didIt =true;
-            }
-        }catch(Exception e)
-        {
-            System.out.println(e);
-
-        }
-        return didIt;
-    }
-
-    public static Boolean ifDay(int i)
-    {
-        if(i == 1)
-        {
+    /**
+     * Saves a new student and returns true, or returns false when the username is taken. The
+     * UNIQUE constraint decides, so two people signing up at the same moment cannot both get it.
+     */
+    boolean addCustomer(Customer customer) throws SQLException {
+        String sql = "INSERT INTO usertable (firstname, lastname, email, age, username, password_hash)"
+                + " VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection connection = connect();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, customer.firstName());
+            statement.setString(2, customer.lastName());
+            statement.setString(3, customer.email());
+            statement.setInt(4, customer.age());
+            statement.setString(5, customer.username());
+            statement.setString(6, customer.passwordHash());
+            statement.executeUpdate();
             return true;
-        }
-        else
-        {
+        } catch (SQLIntegrityConstraintViolationException usernameTaken) {
             return false;
         }
     }
 
-    public ArrayList<ArrayList> getClasses(int Id, String table)
-    {
-        List<ArrayList> myClasses = new ArrayList<ArrayList>();
-        try{
+    Optional<Customer> findByUsername(String username) throws SQLException {
+        return findCustomer("SELECT " + CUSTOMER_COLUMNS + " FROM usertable WHERE username = ?", username);
+    }
 
-            Class.forName(classForName);
-            Connection conn = DriverManager.getConnection(sqlUrl,user,password);
+    Optional<Customer> findById(int id) throws SQLException {
+        return findCustomer("SELECT " + CUSTOMER_COLUMNS + " FROM usertable WHERE id = ?", id);
+    }
 
-            Statement stat = null;
-            ResultSet result = null;
+    private Optional<Customer> findCustomer(String sql, Object key) throws SQLException {
+        try (Connection connection = connect();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, key);
+            try (ResultSet row = statement.executeQuery()) {
+                if (!row.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(new Customer(row.getInt("id"), row.getString("firstname"),
+                        row.getString("lastname"), row.getString("email"), row.getInt("age"),
+                        row.getString("username"), row.getString("password_hash")));
+            }
+        }
+    }
 
-            stat = conn.createStatement();
-            result = stat.executeQuery("SELECT * FROM " + table);
+    /** Saves a class and returns true, or returns false when this student already has a class with that CRN. */
+    boolean addClass(SchoolClass schoolClass) throws SQLException {
+        String sql = "INSERT INTO userclasses (" + CLASS_COLUMNS + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (Connection connection = connect();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, schoolClass.userId());
+            statement.setString(2, schoolClass.name());
+            statement.setString(3, schoolClass.subject());
+            statement.setObject(4, schoolClass.time());
+            int column = 5;
+            for (DayOfWeek day : SchoolClass.SCHOOL_DAYS) {
+                statement.setBoolean(column++, schoolClass.meetsOn(day));
+            }
+            statement.setString(11, schoolClass.professor());
+            statement.setInt(12, schoolClass.crn());
+            statement.setInt(13, schoolClass.grade());
+            statement.setInt(14, schoolClass.credits());
+            statement.executeUpdate();
+            return true;
+        } catch (SQLIntegrityConstraintViolationException crnTaken) {
+            return false;
+        }
+    }
 
-            while (result.next())
-            {
-                if (result.getInt("idUserClasses")== Id)
-                {
-                    List<String> indexClass = new ArrayList<String>();
-                    indexClass.add(result.getString("ClassName"));
-                    indexClass.add(result.getString("Subject"));
-                    indexClass.add(result.getString("Time"));
-
-                    if (ifDay(result.getInt("Monday")))
-                    {
-                        indexClass.add("&#10003;");
-                    }else
-                    {
-                        indexClass.add(" ");
+    /** Only this student's classes: the WHERE clause is what keeps one student out of another's. */
+    List<SchoolClass> classesFor(int userId) throws SQLException {
+        String sql = "SELECT " + CLASS_COLUMNS + " FROM userclasses WHERE idUserClasses = ?";
+        List<SchoolClass> classes = new ArrayList<>();
+        try (Connection connection = connect();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, userId);
+            try (ResultSet row = statement.executeQuery()) {
+                while (row.next()) {
+                    Set<DayOfWeek> days = EnumSet.noneOf(DayOfWeek.class);
+                    for (DayOfWeek day : SchoolClass.SCHOOL_DAYS) {
+                        if (row.getBoolean(SchoolClass.label(day))) {
+                            days.add(day);
+                        }
                     }
-                    if (ifDay(result.getInt("Tuesday")))
-                    {
-                        indexClass.add("&#10003;");
-                    }else
-                    {
-                        indexClass.add(" ");
-                    }
-
-                    if (ifDay(result.getInt("Wednesday")))
-                    {
-                        indexClass.add("&#10003;");
-                    }else
-                    {
-                        indexClass.add(" ");
-                    }
-
-                    if (ifDay(result.getInt("Thursday")))
-                    {
-                        indexClass.add("&#10003;");
-                    }else
-                    {
-                        indexClass.add(" ");
-                    }
-
-                    if (ifDay(result.getInt("Friday")))
-                    {
-                        indexClass.add("&#10003;");
-                    }else
-                    {
-                        indexClass.add(" ");
-                    }
-
-                    if (ifDay(result.getInt("Saturday")))
-                    {
-                        indexClass.add("&#10003;");
-                    }else
-                    {
-                        indexClass.add(" ");
-                    }
-
-                    indexClass.add(result.getString("Professor"));
-                    indexClass.add(Integer.toString(result.getInt("CRN")));
-                    indexClass.add(Integer.toString(result.getInt("Grade")));
-                    indexClass.add(Integer.toString(result.getInt("Credits")));
-                    myClasses.add((ArrayList) indexClass);
+                    classes.add(new SchoolClass(row.getInt("idUserClasses"), row.getString("ClassName"),
+                            row.getString("Subject"), row.getObject("Time", LocalTime.class), days,
+                            row.getString("Professor"), row.getInt("CRN"), row.getInt("Grade"),
+                            row.getInt("Credits")));
                 }
             }
-            return (ArrayList<ArrayList>) myClasses;
         }
-        catch (Exception e)
-        {
-            System.err.println("SQLException in Query.java");
-            return (ArrayList<ArrayList>) myClasses;
-        }
-
+        return classes;
     }
-    public String getClassForName() {
-         return classForName;
-     }
 
-     public String getSqlUrl() {
-         return sqlUrl;
-     }
- }
+    /** Removes the class with this name and CRN, only if it belongs to this student. True when one was removed. */
+    boolean removeClass(int userId, String className, int crn) throws SQLException {
+        String sql = "DELETE FROM userclasses WHERE idUserClasses = ? AND ClassName = ? AND CRN = ?";
+        try (Connection connection = connect();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, userId);
+            statement.setString(2, className);
+            statement.setInt(3, crn);
+            return statement.executeUpdate() > 0;
+        }
+    }
+}
