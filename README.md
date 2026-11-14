@@ -11,6 +11,7 @@
 7. [What changed in 2026, and why](#what-changed-in-2026-and-why)
 8. 🎨[Design](#design)
 9. 📬[Contact](#contact)
+10. [Licence](#licence)
 
 ## <a name="the-problem-i-wanted-to-solve">🎯 The Problem</a>
 
@@ -134,3 +135,9 @@ The app looks and works the same. Underneath, it is now done the way I would do 
 ## <a name="contact">📬 Contact</a>
 [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/tomy-romero-902476145/)
 Any questions, comments, or concerns, email me at tomyfletcher99@hotmail.com. Hope you guys enjoy.
+
+## <a name="licence">Licence</a>
+
+The code is under the MIT licence: see [LICENSE](LICENSE).
+
+The libraries it uses keep their own licences, and none of them is committed here; Maven downloads them when it builds. The MySQL driver (MySQL Connector/J), which goes into the WAR, is under the GNU GPL version 2 with the Universal FOSS Exception, which allows using it with an open source project under MIT. The embedded H2 database, also in the WAR, is under the MPL 2.0 or the EPL 1.0. Jetty, JUnit and the Servlet API are only used to build, run and test the app and are not shipped with it.
