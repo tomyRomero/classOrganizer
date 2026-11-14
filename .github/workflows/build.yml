@@ -1,7 +1,9 @@
 name: Build and test
 
+# Pushes are checked on main; a pull request's branch is checked once, by its pull_request run.
 on:
   push:
+    branches: [main]
   pull_request:
 
 # The job only reads the code; it cannot push, comment or change settings.
