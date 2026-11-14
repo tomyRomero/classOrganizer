@@ -1,282 +1,284 @@
-/*General design*/
+/* Class Organizer: one stylesheet for every page */
 
-img{
-     text-align: center;
-    height: 250px;
-    width: 350px;
+:root {
+    --paper: #f7f1dc;
+    --ink: #2b2620;
+    --accent: #9b1c1c;
+    --line: #ddd3b8;
+    --space: 1rem;
+    --corner: 6px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    max-width: 80rem;
+    margin: 0 auto;
+    padding: 0 var(--space) calc(var(--space) * 3);
+    background: var(--paper);
+    color: var(--ink);
+    font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    text-align: center;
+}
+
+h1 {
+    margin: var(--space) 0;
+    color: var(--accent);
+    font-size: 1.75rem;
+    line-height: 1.2;
+}
+
+h2,
+h3 {
+    margin: 0 0 var(--space);
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+img {
     display: block;
-    margin-left: auto;
-    margin-right: auto;
-    background-color: transparent;
-    z-index: -1;
-
-}
-
-.trans{
-    background: transparent;
-}
-
-h1{
-    color: firebrick;
-    font-family: 'Courier New', monospace;
-    text-shadow: red;
-}
-
-h3{
-    color: firebrick;
-    font-family: 'Courier New', monospace;
-    text-shadow: red;
+    width: 13rem;
+    aspect-ratio: 13 / 5.5;
+    margin: calc(var(--space) * 1.5) auto 0;
+    object-fit: cover;
 }
 
 a {
-    text-decoration:none;
-    background-color: darkred;
-    color: white;
-    padding: 8px 16px;
-    font-family: sans-serif;
-    border-radius: 48px;
-    font-weight:bold;
-
+    color: var(--accent);
+    font-weight: 600;
+    text-underline-offset: 3px;
 }
 
-a:hover {
-    background-color: red;
+:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
 }
 
-body{
-    background-color: khaki;
-    text-align: center;
- }
+
+/* Top bar */
+
+.bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem var(--space);
+    padding: var(--space) 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.brand {
+    color: var(--accent);
+    font-family: ui-monospace, Menlo, Consolas, "Courier New", monospace;
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.bar nav {
+    display: flex;
+    gap: 1.25rem;
+}
+
+.bar a {
+    text-decoration: none;
+}
+
+.bar a:hover {
+    text-decoration: underline;
+}
 
 
-/*Form design*/
-.form-style{
-    max-width: 500px;
-    padding: 20px 12px 10px 20px;
-    font: 13px Arial, Helvetica, sans-serif;
+/* Buttons and the menus made of them */
+
+.button,
+input[type=submit] {
     display: inline-block;
-    text-align: center;
-}
-
-.form-style-heading{
-    font-weight: bold;
-    font-style: italic;
-    border-bottom: 2px solid #ddd;
-    margin-bottom: 20px;
-    font-size: 15px;
-    padding-bottom: 3px;
-}
-.form-style label{
-    display: block;
-    margin: 0px 0px 15px 0px;
-}
-.form-style label > span{
-    width: 100px;
-    font-weight: bold;
-    float: left;
-    padding-top: 8px;
-    padding-right: 5px;
-}
-.form-style span.required{
-    color:red;
-}
-
-.form-style input.input-field, .form-style .select-field{
-    width: 48%;
-}
-.form-style input.input-field,
-.form-style .textarea-field,
-.form-style .select-field{
-    box-sizing: border-box;
-    -webkit-box-sizing: border-box;
-    -moz-box-sizing: border-box;
-    border: 1px solid #C2C2C2;
-    box-shadow: 1px 1px 4px #EBEBEB;
-    -moz-box-shadow: 1px 1px 4px #EBEBEB;
-    -webkit-box-shadow: 1px 1px 4px #EBEBEB;
-    border-radius: 3px;
-    -webkit-border-radius: 3px;
-    -moz-border-radius: 3px;
-    padding: 7px;
-    outline: none;
-}
-.form-style .input-field:focus,
-.form-style .textarea-field:focus,
-.form-style .select-field:focus{
-    border: 1px solid #0C0;
-}
-.form-style .textarea-field{
-    height:100px;
-    width: 55%;
-}
-.form-style input[type=submit],
-.form-style input[type=button]{
-    border: none;
-    padding: 8px 15px 8px 15px;
-    background: #FF8500;
+    padding: 0.6rem 1.2rem;
+    border: 0;
+    border-radius: var(--corner);
+    background: var(--accent);
     color: #fff;
-    box-shadow: 1px 1px 4px #DADADA;
-    -moz-box-shadow: 1px 1px 4px #DADADA;
-    -webkit-box-shadow: 1px 1px 4px #DADADA;
-    border-radius: 3px;
-    -webkit-border-radius: 3px;
-    -moz-border-radius: 3px;
-}
-.form-style input[type=submit]:hover,
-.form-style input[type=button]:hover{
-    background: #EA7B00;
-    color: #fff;
-}
-
-/*Table design*/
-table
-{
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.styled-table
-{
-    border-collapse: collapse;
-    margin: 25px 0;
-    font-size: 0.9em;
-    font-family: sans-serif;
-    min-width: 400px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
-}
-
-.styled-table thead tr
-{
-    background-color: #009879;
-    color: #ffffff;
-    text-align: left;
-}
-
-.styled-table th,
-.styled-table td {
-    padding: 12px 15px;
-}
-
-.styled-table tbody tr {
-    border-bottom: 1px solid #dddddd;
-}
-
-.styled-table tbody tr:nth-of-type(even) {
-    background-color: #f3f3f3;
-}
-
-.styled-table tbody tr:last-of-type {
-    border-bottom: 2px solid #009879;
-}
-
-.styled-table tbody tr.active-row {
-    font-weight: bold;
-    color: #009879;
-}
-
-/*card info design*/
-.card {
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
-    max-width: 300px;
-    margin: auto;
-    text-align: center;
-}
-
-.title {
-    color: grey;
-    font-size: 18px;
-}
-
-.mainCon{
-    display: inline-block;
-    text-align: center;
-}
-
-
-/* checkbox design */
-.dbgOuter{
-    padding: 3px 8px 0px 14px;
-    width: 340px;
-    margin: 0 auto;
-    font-size: 10.5pt;
-}
-.dbgCont{
-    display: inline-block;
-    height: 24px;
-    margin-left: 6px;
-}
-/* Base for label styling */
-.dbgCheck:not(:checked),
-.dbgCheck:checked {
-    position: absolute;
-    left: -9999px;
-}
-.dbgCheck:not(:checked) + label,
-.dbgCheck:checked + label {
-    display:inline-block;
-    position: relative;
-    padding-left: 25px;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: none;
     cursor: pointer;
 }
 
-/* checkbox aspect */
-.dbgCheck:not(:checked) + label:before,
-.dbgCheck:checked + label:before {
-    content: '';
-    position: absolute;
-    left:0; top: 1px;
-    width: 17px; height: 17px;
-    border: 1px solid #aaa;
-    background: #f8f8f8;
-    border-radius: 3px;
-    box-shadow: inset 0 1px 3px   rgba(0,0,0,.3)
-}
-/* checkmark aspect */
-.dbgCheck:not(:checked) + label:after,
-.dbgCheck:checked + label:after {
-    content: "✔";
-    position: absolute;
-    top: 2px; left: 5px;
-    font-size: 14px;
-    color: #09ad7e;
-    transition: all .2s;
-}
-/* checked mark aspect changes */
-.dbgCheck:not(:checked) + label:after {
-    opacity: 0;
-    transform: scale(0);
-}
-.dbgCheck:checked + label:after {
-    opacity: 1;
-    transform: scale(1);
-}
-/* disabled checkbox */
-.dbgCheck:disabled:not(:checked) + label:before,
-.dbgCheck:disabled:checked + label:before {
-    box-shadow: none;
-    border-color: #bbb;
-    background-color: #ddd;
-}
-.dbgCheck:disabled:checked + label:after {
-    color: #999;
-}
-.dbgCheck:disabled + label {
-    color: #aaa;
-}
-/* accessibility */
-.dbgCheck:checked:focus + label:before,
-.dbgCheck:not(:checked):focus + label:before {
-    border: 1px dotted blue;
+.button:hover,
+input[type=submit]:hover {
+    background: #7a1515;
 }
 
-.dbgCheck{
-    display:inline-block;
-    width:90px;
-    height:24px;
-    margin:1em;
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space);
+}
+
+.menu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 18rem;
+    margin: 0 auto;
 }
 
 
+/* What a servlet says back after a form */
+
+.message {
+    max-width: 26rem;
+    margin: var(--space) auto 0;
+    padding: 0.75rem var(--space);
+    border: 1px solid var(--accent);
+    border-radius: var(--corner);
+    background: #fff;
+    text-align: left;
+}
+
+.message h2 {
+    margin: 0;
+    color: var(--accent);
+}
+
+.message p {
+    margin: 0.25rem 0 0;
+}
 
 
+/* Forms */
 
+.form-style {
+    max-width: 26rem;
+    margin: 0 auto;
+    padding: calc(var(--space) * 1.5);
+    border: 1px solid var(--line);
+    border-radius: var(--corner);
+    background: #fff;
+    text-align: left;
+}
+
+.form-style label {
+    display: block;
+    margin-bottom: var(--space);
+    font-weight: 600;
+}
+
+.form-style label > span {
+    display: block;
+    margin-bottom: 0.3rem;
+}
+
+.required {
+    color: var(--accent);
+}
+
+.input-field,
+.select-field {
+    display: block;
+    width: 100%;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid #8c826c;
+    border-radius: var(--corner);
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    font-weight: 400;
+}
+
+.days {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    margin: 0 0 var(--space);
+    padding: 0;
+    border: 0;
+}
+
+.days legend {
+    margin-bottom: 0.3rem;
+    padding: 0;
+    font-weight: 600;
+}
+
+.form-style .days label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0;
+    font-weight: 400;
+}
+
+input[type=checkbox] {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0;
+    accent-color: var(--accent);
+}
+
+
+/* Schedule: scrolls sideways when the screen is narrower than the table */
+
+.styled-table {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto calc(var(--space) * 2);
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-collapse: collapse;
+    border-radius: var(--corner);
+    background: #fff;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.styled-table td {
+    padding: 0.55rem 0.75rem;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.styled-table tr:first-child td {
+    background: var(--paper);
+    font-weight: 600;
+}
+
+.styled-table tr:last-child td {
+    border-bottom: 0;
+}
+
+/* Monday to Saturday hold a tick */
+.styled-table td:nth-child(n+4):nth-child(-n+9) {
+    text-align: center;
+}
+
+
+/* Account info */
+
+.card {
+    max-width: 24rem;
+    margin: calc(var(--space) * 1.5) auto;
+    padding: calc(var(--space) * 1.5);
+    border: 1px solid var(--line);
+    border-radius: var(--corner);
+    background: #fff;
+}
+
+.card img {
+    margin-top: 0;
+}
+
+.title {
+    margin: 0;
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--line);
+    font-size: 1rem;
+    font-weight: 400;
+    text-align: left;
+}

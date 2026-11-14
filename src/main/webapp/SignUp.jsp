@@ -1,17 +1,20 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Class Management</title>
     <link href="main.css" rel="stylesheet" type="text/css">
 </head>
 <body>
+<header class="bar">
+    <span class="brand">Class Organizer</span>
+    <nav><a href="index.jsp">Home</a> <a href="Login.jsp">Log in</a></nav>
+</header>
+<main>
 <%@ include file="/WEB-INF/message.jspf" %>
-
 <img src="books.png" alt="bookslogo">
-
 <h1> <%= "Create Account" %></h1>
-
 <div class="form-style">
     <form name="loginForm" method="post" action="process-signup">
         <label><span>Firstname<span class="required">*</span></span><input type="text" class="input-field" name="firstname" value="" /></label>
@@ -23,12 +26,6 @@
         <input type="submit" value="Sign Up" />
     </form>
 </div>
-<br>
-<br>
-<a href="index.jsp">Home</a>
-<br>
-<br/>
-<br>
-<a href="Login.jsp">Log in</a>
+</main>
 </body>
 </html>
