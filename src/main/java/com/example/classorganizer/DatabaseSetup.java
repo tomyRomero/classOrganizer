@@ -20,6 +20,13 @@ public class DatabaseSetup implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent event) {
         Database database = Database.fromSettings();
+        String driver = database.isEmbedded() ? "org.h2.Driver" : "com.mysql.cj.jdbc.Driver";
+        try {
+            // Some servers list their drivers before the app starts and miss ours in WEB-INF/lib; loading it by name registers it.
+            Class.forName(driver);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("The database driver " + driver + " is missing from the app", e);
+        }
         if (database.isEmbedded()) {
             try {
                 database.createTables();
