@@ -37,11 +37,10 @@ This way of running uses an embedded database: H2 in MySQL mode, kept in memory 
 ./mvnw verify
 ```
 
-This runs 75 tests:
+This builds the app and runs the tests:
 
-- **Rules:** password hashing, the form checks, letter grades, the GPA and the order of the schedule (`src/test/java/.../*Test.java`).
-- **Database:** every query against a fresh embedded database, including that a stored password is a hash and that one student can never remove another's class (`DatabaseTest`).
-- **The running app:** Maven starts the app on port 18089 and the tests walk every page over HTTP, like a browser: sign up, log in, add a class, see the schedule, remove a class, account info and log out, plus the security rules (`*IT.java`).
+- **Passwords:** the hashing on its own (`PasswordsTest`).
+- **The running app:** Maven starts the app on port 18089 and the tests use it over HTTP, like a browser. One walks through every page (sign up, log in, add a class, see the schedule, remove a class, account info, log out), and the rest check each fault the 2023 version had (`FlowIT`, `SecurityIT`, `FormsIT`).
 
 GitHub runs the same command on every push and pull request (`.github/workflows/build.yml`).
 
@@ -63,9 +62,9 @@ docker compose up -d
 SQL_Connection=jdbc:mysql://localhost:3306/classorganizer user=classorganizer password="$MYSQL_PASSWORD" ./mvnw jetty:run
 ```
 
-If you use a MySQL you set up yourself (Amazon RDS, for example), run `src/main/resources/schema.sql` against it once first.
+If you use a MySQL you set up yourself (Amazon RDS, for example), run `src/main/resources/schema.sql` against it once first. A database from the 2023 version will not work: the password column changed, so make a fresh database for this version. Old accounts cannot be carried over either, because their passwords were never hashed, so everyone signs up again.
 
-Note: the 2026 update was built and tested against the embedded database. The MySQL route above was written and checked by reading, but not yet run against a live MySQL.
+Note: I built and tested this update against the embedded database. The MySQL route above is written and checked by reading, but I have not run it against a live MySQL yet.
 
 ## <a name="deployment">📦 Deployment</a>
 
@@ -91,20 +90,13 @@ Today `./mvnw package` still builds that WAR in `target/`. It runs on any Jakart
 
 ## <a name="what-changed-in-2026-and-why">What changed in 2026, and why</a>
 
-The app looks and works the same. Underneath, it is now done the way I would do it today. Each point names the old way, the new way and the reason, with the C# idea it matches.
+The app looks and works the same as in 2023. These are the five changes I learned the most from.
 
-- **Passwords.** Before, they were stored and compared as plain text. Now they are stored as salted PBKDF2 hashes from the JDK (`Passwords.java`), 600,000 rounds, compared in constant time. A leaked table should never leak passwords. It is the same idea as `Rfc2898DeriveBytes.Pbkdf2` in .NET, and Java needs no library for it.
-- **SQL.** Before, some queries glued typed text into the SQL (`"... where username='" + equal + "'"`), so a username could rewrite the query. Now every query is a `PreparedStatement` with `?` parameters, like `SqlParameter` in ADO.NET. That is what stops SQL injection.
-- **Closing what you open.** Before, connections, statements and results were never closed, so every page leaked a database connection. Now each one sits in try-with-resources, `try (Connection c = ...) { }`, which is Java's `using`.
-- **Login.** Before, the app looked the account up by its password, so two students with the same password could end up in each other's accounts. Now it finds the account by username, then checks the password against the stored hash, with the same message for a wrong name or a wrong password.
-- **Sessions.** Before, a page behind the login crashed for a visitor with a stack trace, the session id stayed the same after login, and Log Out only went back to the home page. Now one filter (`LoginFilter`, much like ASP.NET middleware or `[Authorize]`) guards those pages, logging in starts a new session and `/logout` ends it.
-- **One student, one schedule.** Before, Remove Class only compared against the first class on the account, then deleted that CRN for every student. Now every query on classes carries the student's id in its WHERE clause, and a test proves one student cannot read or remove another's classes.
-- **Checking input.** Before, the Add Class check looked at the field names instead of their values, Create Account ignored its own check, and a blank number crashed the page. Now `Validation.java` checks every field on the server and shows a plain message on the same page. The browser's `required` is only a hint; anyone can send a request without it.
-- **Escaping.** Before, names and class names went into the page as raw HTML, so a "name" could carry a script. Now everything a user typed goes through `Html.escape`. Razor does this for you with `@`; JSP and servlets do not.
-- **Errors.** Before, exceptions were printed to the console or swallowed. Now they travel up as checked exceptions (`throws SQLException`: unlike C#, Java makes you handle or declare them), the servlet logs the cause and the student sees one plain line. Anything unexpected lands on a plain error page set in `web.xml`.
-- **Dependencies.** Before, the MySQL driver jar was committed in `WEB-INF/Lib` (Linux servers only look in `lib`, lowercase) and the IDE's `.idea` folder was in the repo. Now Maven fetches the driver, every version is pinned in `pom.xml`, and `.gitignore` keeps jars and IDE files out. It is the NuGet way: declare a package, never commit it.
-- **Names and records.** Before, there were classes called `myClass`, `account` and `table`, and rows were passed around as `ArrayList<ArrayList>`. Now classes use PascalCase like in C# (`Account`, `Table`, `SchoolClass`), and a row is a `record` (`Customer`, `SchoolClass`), just like a C# record.
-- **Running and testing.** Before, you needed GlassFish and a MySQL to see anything, and there were no tests. Now `./mvnw jetty:run` starts it with an embedded database, and `./mvnw verify` runs 75 tests with JUnit (Java's xUnit), on GitHub too.
+- **Passwords.** In 2023 I saved passwords exactly as people typed them. Now they are saved as salted PBKDF2 hashes (`Passwords.java`), which the JDK can make with no extra library. If the table ever leaks, the passwords do not.
+- **Logging in.** My old login looked the account up by its password, so two students with the same password could land in each other's accounts. Now it finds the account by username and then checks the password. Logging in also starts a new session, and logging out ends it.
+- **Queries.** Some of my queries glued typed text straight into the SQL, so a username could rewrite the query, and connections were never closed. Now every query is a `PreparedStatement` with `?` parameters inside try-with-resources, which is Java's version of C#'s `using`.
+- **Each student's own classes.** Remove Class used to delete a CRN for every student who had it, not just for the one logged in. Now every query on classes carries the student's id, so one student can never see or remove another's classes.
+- **Checking and escaping input.** My forms trusted whatever came in, a blank number crashed the page, and names went onto the page as raw HTML. Now `Validation.java` checks every field on the server and shows a plain message, and everything a person typed is escaped before it is shown.
 
 # <a name="design">🎨 Design</a>
 
@@ -140,4 +132,4 @@ Any questions, comments, or concerns, email me at tomyfletcher99@hotmail.com. Ho
 
 The code is under the MIT licence: see [LICENSE](LICENSE).
 
-The libraries it uses keep their own licences, and none of them is committed here; Maven downloads them when it builds. The MySQL driver (MySQL Connector/J), which goes into the WAR, is under the GNU GPL version 2 with the Universal FOSS Exception, which allows using it with an open source project under MIT. The embedded H2 database, also in the WAR, is under the MPL 2.0 or the EPL 1.0. Jetty, JUnit and the Servlet API are only used to build, run and test the app and are not shipped with it.
+The libraries it uses keep their own licences, and none of them is committed here; Maven downloads them when it builds. The MySQL driver (MySQL Connector/J), which goes into the WAR, is under the GNU GPL version 2 with the Universal FOSS Exception, which allows using it with an open source project under MIT. The driver also brings Google's Protocol Buffers library (protobuf-java) into the WAR, under the BSD 3-Clause licence. The embedded H2 database, also in the WAR, is under the MPL 2.0 or the EPL 1.0. Jetty, JUnit and the Servlet API are only used to build, run and test the app and are not shipped with it.
