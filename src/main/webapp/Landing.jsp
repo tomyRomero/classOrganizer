@@ -1,13 +1,15 @@
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="com.example.classorganizer.Html" %>
 <html>
 <head>
     <title>Landing</title>
     <link href="main.css" rel="stylesheet" type="text/css">
 </head>
 <body>
+<%@ include file="/WEB-INF/message.jspf" %>
 <img src="books.png" alt="bookslogo">
-<h1 class="heading"> Welcome User: ${name}</h1>
+<h1 class="heading"> Welcome User: ${Html.escape(name)}</h1>
 <br>
 <br>
 <br>
@@ -27,7 +29,7 @@
 <br>
 <br>
 <br>
-<a href="index.jsp">Log Out</a>
+<a href="logout">Log Out</a>
 <br>
 <br>
 <br>

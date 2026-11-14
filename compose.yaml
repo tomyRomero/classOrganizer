@@ -1,0 +1,21 @@
+# A local MySQL for Class Organizer, for when you want the real database instead of the embedded one.
+# Start it with:  MYSQL_PASSWORD=pick-one docker compose up -d
+# The first start creates the classorganizer database and loads src/main/resources/schema.sql into it.
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: classorganizer
+      MYSQL_USER: classorganizer
+      # No password is written in the repo: you choose one when you start it.
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD before starting}
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    ports:
+      # Only this Mac can reach it.
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+      - mysql-data:/var/lib/mysql
+
+volumes:
+  mysql-data:

@@ -1,0 +1,18 @@
+<%@ page import="com.example.classorganizer.Html, java.util.List" %>
+<%-- What a servlet left for this page (a heading and detail lines), shown on top and escaped. --%>
+<%
+    String heading = (String) request.getAttribute("heading");
+    if (heading != null) {
+%>
+<h1><%= Html.escape(heading) %></h1>
+<%
+        List<?> details = (List<?>) request.getAttribute("details");
+        if (details != null) {
+            for (Object line : details) {
+%>
+<h2><%= Html.escape(String.valueOf(line)) %></h2>
+<%
+            }
+        }
+    }
+%>

@@ -1,95 +1,56 @@
 package com.example.classorganizer;
 
+import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.sql.*;
+import java.sql.SQLException;
+import java.util.List;
 
+/** The Create Account form. Checks the fields, stores a hash of the password, never the password. */
 @WebServlet(name = "ProcessSignUp", value = "/process-signup")
-public class ProcessSignUp extends HttpServlet
-{
-    private String message;
+public class ProcessSignUp extends HttpServlet {
 
-    public void init()
-    {
-        message = "Data Acquired";
+    private static final String FAILED = "Error creating account, please try again";
+
+    private Database database;
+
+    @Override
+    public void init() {
+        database = Pages.database(getServletContext());
     }
 
-    Database myDatabase = new Database();
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        String firstName = Pages.field(request, "firstname");
+        String lastName = Pages.field(request, "lastname");
+        String username = Pages.field(request, "username");
+        String email = Pages.field(request, "email");
+        String age = Pages.field(request, "age");
+        String password = request.getParameter("password") == null ? "" : request.getParameter("password");
 
-    public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        response.setContentType("text/html");
-        Boolean access = true;
-        String firstName = request.getParameter("firstname");
-        String lastName = request.getParameter("lastname");
-        String username = request.getParameter("username");
-        String password = request.getParameter("password");
-        String email = request.getParameter("email");
-        String age = request.getParameter("age");
-
-        if (firstName.equals("") || lastName.equals("")|| username.equals("")|| password.equals("") || email.equals("") || age.equals("") ){
-            access = false;
+        List<String> problems = Validation.checkSignUp(firstName, lastName, username, password, email, age);
+        if (!problems.isEmpty()) {
+            Pages.show(request, response, "/SignUp.jsp", FAILED, problems);
+            return;
         }
 
+        Customer customer = new Customer(0, firstName, lastName, email, Integer.parseInt(age), username,
+                Passwords.hash(password));
         try {
-            int ageNew = Integer.parseInt(age);
-            Customer customer = new Customer(myDatabase.getLastID("usertable","id")+1,firstName, lastName,email, ageNew ,username,password);
-            System.out.println("Success new Customer Class");
-            access = myDatabase.insertData(customer, response);
-        }
-        catch (Exception e)
-        {
-            access = false;
-            System.out.println(e);
-            System.out.println("attempted but no luck");
-        }
-
-        PrintWriter out = response.getWriter();
-
-        if (access)
-        {
-            // build HTML code
-            String htmlResponse = "<html>";
-            htmlResponse += "<div style= text-align: center> ";
-            htmlResponse += "<h1> Account Created: Proceed to Login <h1/>";
-            htmlResponse += "<h2>Your username is: " + username + "<h2/>";
-            htmlResponse += "</div>";
-            htmlResponse += "</html>";
-            out.println(htmlResponse);
-
-            try {
-                request.getRequestDispatcher("/Login.jsp").include(request, response);
+            if (!database.addCustomer(customer)) {
+                Pages.show(request, response, "/SignUp.jsp", FAILED,
+                        List.of("That username is already taken, please pick another one."));
+                return;
             }
-            catch(Exception e)
-            {
-                System.out.println(e);
-            }
+        } catch (SQLException e) {
+            Pages.serverProblem(request, response, "/SignUp.jsp", FAILED, e);
+            return;
         }
-        else{
-            out.println("<div style= text-align: center> ");
-            out.println("<h1> Error creating account, please try again" + "<h1/>");
-            out.println("</div>");
-            try {
-                request.getRequestDispatcher("/SignUp.jsp").include(request,response);
-            }
-            catch (Exception e)
-            {
-                System.out.println(e);
-            }
-
-        }
-
-
+        Pages.show(request, response, "/Login.jsp", "Account Created: Proceed to Login",
+                List.of("Your username is: " + username));
     }
-
-    public void destroy()
-    {
-
-    }
-
-
 }

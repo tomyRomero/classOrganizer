@@ -8,42 +8,228 @@
   <artifactId>classOrganizer</artifactId>
   <version>1.0-SNAPSHOT</version>
   <name>classOrganizer</name>
+  <description>Record your classes and see a clearer weekly schedule. Java servlets, JSP and MySQL.</description>
   <packaging>war</packaging>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.target>11</maven.compiler.target>
-    <maven.compiler.source>11</maven.compiler.source>
-      <junit.version>5.9.2</junit.version>
-      </properties>
+    <!-- "release" compiles for Java 17 and checks we only use Java 17 APIs. -->
+    <maven.compiler.release>17</maven.compiler.release>
+
+    <jetty.version>12.1.15</jetty.version>
+    <!-- Port for ./mvnw jetty:run, and a second one the integration tests start their own server on. -->
+    <app.port>8080</app.port>
+    <it.port>18089</it.port>
+    <!-- The embedded database for local runs and tests: H2 pretending to be MySQL, kept in memory. -->
+    <!-- The integration tests use a file so the tests can open it too and check what the app stored. -->
+    <it.db.url>jdbc:h2:file:${project.build.directory}/it-database/classorganizer;MODE=MySQL;DATABASE_TO_LOWER=TRUE;IGNORECASE=TRUE;AUTO_SERVER=TRUE</it.db.url>
+    <embedded.db.url>jdbc:h2:mem:classorganizer;MODE=MySQL;DATABASE_TO_LOWER=TRUE;IGNORECASE=TRUE;DB_CLOSE_DELAY=-1</embedded.db.url>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>6.1.3</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
+    <!-- Servlet 6.0 (Jakarta EE 10): the server (Jetty, GlassFish 7) provides it at run time. -->
     <dependency>
       <groupId>jakarta.servlet</groupId>
       <artifactId>jakarta.servlet-api</artifactId>
-      <version>5.0.0</version>
+      <version>6.0.0</version>
       <scope>provided</scope>
-    </dependency>                                                
+    </dependency>
+    <!-- The real database driver, fetched by Maven instead of a jar committed to the repo. -->
+    <dependency>
+      <groupId>com.mysql</groupId>
+      <artifactId>mysql-connector-j</artifactId>
+      <version>26.10.0</version>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- The embedded database, used when SQL_Connection starts with jdbc:h2: (local runs and tests). -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <version>2.5.252</version>
+      <scope>runtime</scope>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-api</artifactId>
-      <version>${junit.version}</version>
+      <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
-      <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-engine</artifactId>
-        <version>${junit.version}</version>
-        <scope>test</scope>
-      </dependency>
   </dependencies>
 
   <build>
-        <plugins>
+    <pluginManagement>
+      <!-- Every plugin the build uses, pinned, so a build today and a build next year use the same tools. -->
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>3.5.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>3.5.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.16.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.6.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>3.6.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-war-plugin</artifactId>
+          <version>3.5.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-install-plugin</artifactId>
+          <version>3.2.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>3.2.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-site-plugin</artifactId>
+          <version>3.22.0</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-war-plugin</artifactId>
-        <version>3.3.2</version>
-      </plugin>                </plugins>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <!-- Every compiler warning fails the build, so warnings never pile up. -->
+          <compilerArgs>
+            <arg>-Xlint:all,-serial,-processing</arg>
+          </compilerArgs>
+          <failOnWarning>true</failOnWarning>
+        </configuration>
+      </plugin>
+
+      <!-- Integration tests (*IT.java) talk HTTP to a real Jetty started just for them. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <app.baseUrl>http://localhost:${it.port}/</app.baseUrl>
+            <it.databaseUrl>${it.db.url}</it.databaseUrl>
+          </systemPropertyVariables>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- The integration tests' database file is deleted before they start, so one run never changes the next. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-clean-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>fresh-database-for-integration-tests</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+            <configuration>
+              <excludeDefaultDirectories>true</excludeDefaultDirectories>
+              <filesets>
+                <fileset>
+                  <directory>${project.build.directory}/it-database</directory>
+                </fileset>
+              </filesets>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
+        Jetty serves the same servlets and JSP pages GlassFish did, with nothing to install:
+        ./mvnw jetty:run starts the app on http://localhost:8080/
+      -->
+      <plugin>
+        <groupId>org.eclipse.jetty.ee10</groupId>
+        <artifactId>jetty-ee10-maven-plugin</artifactId>
+        <version>${jetty.version}</version>
+        <configuration>
+          <webApp>
+            <contextPath>/</contextPath>
+          </webApp>
+          <httpConnector>
+            <port>${app.port}</port>
+          </httpConnector>
+          <!-- The app reads SQL_Connection from the environment first, then from here. -->
+          <systemProperties>
+            <SQL_Connection>${embedded.db.url}</SQL_Connection>
+          </systemProperties>
+          <stopKey>classorganizer-stop</stopKey>
+          <stopPort>18090</stopPort>
+        </configuration>
+        <executions>
+          <execution>
+            <id>start-for-integration-tests</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>start</goal>
+            </goals>
+            <configuration>
+              <httpConnector>
+                <port>${it.port}</port>
+              </httpConnector>
+              <systemProperties>
+                <SQL_Connection>${it.db.url}</SQL_Connection>
+              </systemProperties>
+            </configuration>
+          </execution>
+          <execution>
+            <id>stop-after-integration-tests</id>
+            <phase>post-integration-test</phase>
+            <goals>
+              <goal>stop</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
   </build>
 </project>
