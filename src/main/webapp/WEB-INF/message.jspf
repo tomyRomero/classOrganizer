@@ -4,15 +4,19 @@
     String heading = (String) request.getAttribute("heading");
     if (heading != null) {
 %>
-<h1><%= Html.escape(heading) %></h1>
+<div class="message">
+<h2><%= Html.escape(heading) %></h2>
 <%
         List<?> details = (List<?>) request.getAttribute("details");
         if (details != null) {
             for (Object line : details) {
 %>
-<h2><%= Html.escape(String.valueOf(line)) %></h2>
+<p><%= Html.escape(String.valueOf(line)) %></p>
 <%
             }
         }
+%>
+</div>
+<%
     }
 %>
