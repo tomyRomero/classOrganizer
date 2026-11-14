@@ -148,8 +148,14 @@ public final class Database {
             statement.setInt(14, schoolClass.credits());
             statement.executeUpdate();
             return true;
-        } catch (SQLIntegrityConstraintViolationException crnTaken) {
-            return false;
+        } catch (SQLIntegrityConstraintViolationException refused) {
+            // A missing student breaks a rule too; only a CRN already on this student's list means "taken".
+            boolean crnTaken = classesFor(schoolClass.userId()).stream()
+                    .anyMatch(saved -> saved.crn() == schoolClass.crn());
+            if (crnTaken) {
+                return false;
+            }
+            throw refused;
         }
     }
 
